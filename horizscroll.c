@@ -15,6 +15,7 @@ We also use the split() function to create a status bar.
 #include "neslib.h"
 #include <string.h>
 #include <joystick.h>
+#include <nes.h>
 // 0 = horizontal mirroring
 // 1 = vertical mirroring
 #define NES_MIRRORING 1
@@ -56,12 +57,15 @@ typedef struct {
   	byte dir;
 } Hero;
 
-typedef enum { D_RIGHT, D_DOWN, D_LEFT, D_UP } dir_t;
-const char DIR_X[4] = { 1, 0, -1, 0 };
-const char DIR_Y[4] = { 0, 1, 0, -1 };
-
 Hero heros;
 
+
+typedef enum { D_RIGHT, D_DOWN, D_LEFT, D_UP } dir_t;
+const char DIR_X[4] = { 1, 0, -1, 0 };
+const char DIR_Y[4] = { 0, 2, 0, -2 };
+
+unsigned char pad1;
+unsigned char pad1_new;
 // actor x/y positions
 
 // buffers that hold vertical slices of nametable data
@@ -185,19 +189,21 @@ void update_offscreen() {
   
 }
 
-
-void movement(Hero* h){
-   byte joy;
-  byte dir = 0xff;
-
- 
-  if (joy & JOY_LEFT_MASK) dir = D_LEFT;
-  if (joy & JOY_RIGHT_MASK) dir = D_RIGHT;
-  if (joy & JOY_UP_MASK) dir = D_UP;
-  if (joy & JOY_DOWN_MASK) dir = D_DOWN;
-  
+void move_player(Hero* h){
   h->x += DIR_X[h->dir];
   h->y += DIR_Y[h->dir];
+}
+
+void movement(Hero* h){
+   
+   byte dir;
+   pad1_new = pad_trigger(0); // read the first controller
+   pad1 = pad_state(0);
+   
+
+  if (pad1 & JOY_BTN_A_MASK) dir = D_UP;
+	else dir = D_DOWN;
+  h->dir = dir;
 }
 
 // scrolls the screen left one pixel
@@ -205,12 +211,17 @@ void scroll_left() {
   // update nametable every 16 pixels
   if ((x_scroll & 15) == 0) {
     update_offscreen();
+    
+  }
+  if((x_scroll & 10) == 0){
+    movement(&heros);
   }
   // increment x_scroll
   ++x_scroll;
    
+  move_player(&heros);
   
-  
+  oam_meta_spr(heros.x, heros.y, 4, metasprite);
   
 }
 
@@ -233,8 +244,8 @@ void scroll_demo() {
     
     // scroll to the left
     scroll_left();
-    movement(&heros);
-    oam_meta_spr(heros.x, heros.y, 4, metasprite);
+    
+    
   }
 }
 
@@ -294,7 +305,7 @@ void main(void) {
   oam_spr(1, 30, 0xa0, 0, 0);
   
   oam_meta_spr(heros.x, heros.y, 4, metasprite);
-  heros.dir = D_DOWN;
+  //heros.dir = D_DOWN;
 
   //oam_spr(25, 120, 0xd8, 6, 4);
   //oam_spr(20, 130, 0xd9, 6, 4);
