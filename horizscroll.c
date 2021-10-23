@@ -14,7 +14,7 @@ We also use the split() function to create a status bar.
 
 #include "neslib.h"
 #include <string.h>
-
+#include <joystick.h>
 // 0 = horizontal mirroring
 // 1 = vertical mirroring
 #define NES_MIRRORING 1
@@ -40,19 +40,29 @@ byte seg_gap;
 
 #define TILE 0xd8
 #define ATTR 02
+
 const unsigned char metasprite[]={
-        0,      0,      TILE,   ATTR, 
+        0,      0,      TILE,     ATTR, 
         0,      8,      TILE+1,   ATTR, 
         8,      0,      TILE+2,   ATTR, 
         8,      8,      TILE+3,   ATTR, 
         128};
 
-// number of actors (4 h/w sprites each)
-#define NUM_ACTORS 1
+typedef struct {
+	unsigned int x; // low byte is sub-pixel
+	unsigned int y;
+	signed int vel_x; // speed, signed, low byte is sub-pixel
+	signed int vel_y;
+  	byte dir;
+} Hero;
+
+typedef enum { D_RIGHT, D_DOWN, D_LEFT, D_UP } dir_t;
+const char DIR_X[4] = { 1, 0, -1, 0 };
+const char DIR_Y[4] = { 0, 1, 0, -1 };
+
+Hero heros;
 
 // actor x/y positions
-byte actor_x;
-byte actor_y;
 
 // buffers that hold vertical slices of nametable data
 char ntbuf1[PLAYROWS];	// left side
@@ -175,6 +185,21 @@ void update_offscreen() {
   
 }
 
+
+void movement(Hero* h){
+   byte joy;
+  byte dir = 0xff;
+
+ 
+  if (joy & JOY_LEFT_MASK) dir = D_LEFT;
+  if (joy & JOY_RIGHT_MASK) dir = D_RIGHT;
+  if (joy & JOY_UP_MASK) dir = D_UP;
+  if (joy & JOY_DOWN_MASK) dir = D_DOWN;
+  
+  h->x += DIR_X[h->dir];
+  h->y += DIR_Y[h->dir];
+}
+
 // scrolls the screen left one pixel
 void scroll_left() {
   // update nametable every 16 pixels
@@ -183,6 +208,10 @@ void scroll_left() {
   }
   // increment x_scroll
   ++x_scroll;
+   
+  
+  
+  
 }
 
 // main loop, scrolls left continuously
@@ -204,7 +233,8 @@ void scroll_demo() {
     
     // scroll to the left
     scroll_left();
-    
+    movement(&heros);
+    oam_meta_spr(heros.x, heros.y, 4, metasprite);
   }
 }
 
@@ -234,7 +264,7 @@ void put_str(unsigned int adr, const char *str) {
 // main function, run after console reset
 void main(void) {
 
-char oam_id;
+
   // get data for initial segment
 
 
@@ -256,12 +286,16 @@ char oam_id;
   // set sprite 0
   oam_clear();
   
+  heros.x = 40;
+  heros.y = 120;
   
 
   vrambuf_clear();
   oam_spr(1, 30, 0xa0, 0, 0);
   
-  oam_id = oam_meta_spr(40, 120, 4, metasprite);
+  oam_meta_spr(heros.x, heros.y, 4, metasprite);
+  heros.dir = D_DOWN;
+
   //oam_spr(25, 120, 0xd8, 6, 4);
   //oam_spr(20, 130, 0xd9, 6, 4);
   //oam_spr(20, 140, 0xda, 6, 4);
