@@ -213,7 +213,7 @@ void scroll_left() {
     update_offscreen();
     
   }
-  if((x_scroll & 10) == 0){
+  if((x_scroll & 3) == 0){
     movement(&heros);
   }
   // increment x_scroll
