@@ -20,6 +20,9 @@ We also use the split() function to create a status bar.
 // 1 = vertical mirroring
 #define NES_MIRRORING 1
 
+
+#include "horizscroll.h"
+
 // VRAM update buffer
 #include "vrambuf.h"
 //#link "vrambuf.c"
@@ -50,14 +53,40 @@ const unsigned char metasprite[]={
         128};
 
 typedef struct {
-	unsigned int x; // low byte is sub-pixel
-	unsigned int y;
+	byte x; // low byte is sub-pixel
+	byte y;
 	signed int vel_x; // speed, signed, low byte is sub-pixel
 	signed int vel_y;
   	byte dir;
+  	int collided:1;
 } Hero;
 
 Hero heros;
+
+
+
+/*{pal:"nes",layout:"nes"}*/
+const char PALETTE[32] = { 
+  0x03,			// background color
+
+  0x25,0x30,0x27,0x00,	// ladders and pickups
+  0x1C,0x20,0x2C,0x00,	// floor blocks
+  0x00,0x10,0x20,0x00,
+  0x06,0x16,0x26,0x00,
+
+  0x16,0x35,0x24,0x00,	// enemy sprites
+  0x00,0x37,0x25,0x00,	// rescue person
+  0x0D,0x2D,0x1A,0x00,
+  0x0D,0x27,0x2A	// player sprites
+};
+
+// function to write a string into the name table
+//   adr = start address in name table
+//   str = pointer to string
+void put_str(unsigned int adr, const char *str) {
+  vram_adr(adr);        // set PPU read/write address
+  vram_write(str, strlen(str)); // write bytes to PPU
+}
 
 
 typedef enum { D_RIGHT, D_DOWN, D_LEFT, D_UP } dir_t;
@@ -181,17 +210,24 @@ void update_offscreen() {
 
   if (--seg_width == 0) {
 
-    
     new_segment();
-    
   }
+  
+}
 
+void check_for_collision(Hero* h){
+
+  //checks if player has collided with wall or tail by check if
+  //wall or tail will be in x,y coordinate 
+  if (h->y == 240)
+    h->collided = 1 ;
   
 }
 
 void move_player(Hero* h){
   h->x += DIR_X[h->dir];
   h->y += DIR_Y[h->dir];
+
 }
 
 void movement(Hero* h){
@@ -204,11 +240,15 @@ void movement(Hero* h){
   if (pad1 & JOY_BTN_A_MASK) dir = D_UP;
 	else dir = D_DOWN;
   h->dir = dir;
+  
 }
+
 
 // scrolls the screen left one pixel
 void scroll_left() {
   // update nametable every 16 pixels
+  
+
   if ((x_scroll & 15) == 0) {
     update_offscreen();
     
@@ -218,9 +258,8 @@ void scroll_left() {
   }
   // increment x_scroll
   ++x_scroll;
-   
-  move_player(&heros);
   
+  move_player(&heros);
   oam_meta_spr(heros.x, heros.y, 4, metasprite);
   
 }
@@ -231,6 +270,7 @@ void scroll_demo() {
   
   new_segment();
   x_scroll = 0;
+  
   // infinite loop
   while (1) {
     // ensure VRAM buffer is cleared
@@ -240,57 +280,28 @@ void scroll_demo() {
     vrambuf_clear();
     
     // split at sprite zero and set X scroll
-    split(x_scroll, 0);
-    
+    split(x_scroll, 0); 
+
     // scroll to the left
     scroll_left();
+    check_for_collision(&heros);
+  if(heros.collided == 1){
+    break;
     
-    
+  }
   }
 }
 
-/*{pal:"nes",layout:"nes"}*/
-const char PALETTE[32] = { 
-  0x03,			// background color
-
-  0x25,0x30,0x27,0x00,	// ladders and pickups
-  0x1C,0x20,0x2C,0x00,	// floor blocks
-  0x00,0x10,0x20,0x00,
-  0x06,0x16,0x26,0x00,
-
-  0x16,0x35,0x24,0x00,	// enemy sprites
-  0x00,0x37,0x25,0x00,	// rescue person
-  0x0D,0x2D,0x1A,0x00,
-  0x0D,0x27,0x2A	// player sprites
-};
-
-// function to write a string into the name table
-//   adr = start address in name table
-//   str = pointer to string
-void put_str(unsigned int adr, const char *str) {
-  vram_adr(adr);        // set PPU read/write address
-  vram_write(str, strlen(str)); // write bytes to PPU
-}
-
-// main function, run after console reset
-void main(void) {
-
-
-  // get data for initial segment
-
-
-
-  
-  pal_all(PALETTE);
+void test_function(){
   // write text to name table
+  ppu_off();
+  vrambuf_flush();
   
   put_str(NTADR_A(7,1), "Nametable A, Line 1");
   put_str(NTADR_A(7,2), "Nametable A, Line 2");
   vram_adr(NTADR_A(0,3));
   vram_fill(5, 32);
- 
-  
-  // set attributes
+
   vram_adr(0x23c0);
   vram_fill(0x55, 8);
   
@@ -302,15 +313,9 @@ void main(void) {
   
 
   vrambuf_clear();
-  oam_spr(1, 30, 0xa0, 0, 0);
+  oam_spr(1, 30, 0xa5, 0, 0);
   
   oam_meta_spr(heros.x, heros.y, 4, metasprite);
-  //heros.dir = D_DOWN;
-
-  //oam_spr(25, 120, 0xd8, 6, 4);
-  //oam_spr(20, 130, 0xd9, 6, 4);
-  //oam_spr(20, 140, 0xda, 6, 4);
-  //oam_spr(20, 150, 0xdb, 6, 4);
   
   // clear vram buffer
   vrambuf_clear();
@@ -318,7 +323,23 @@ void main(void) {
   
   // enable PPU rendering (turn on screen)
   ppu_on_all();
-
-  // scroll window back and forth
+  
+ heros.collided =0;
   scroll_demo();
+  
+  test_function();
+}
+
+
+
+
+// main function, run after console reset
+void main(void) {
+pal_all(PALETTE);
+
+  // get data for initial segment
+
+  test_function();
+
+    
 }
