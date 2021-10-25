@@ -59,6 +59,7 @@ typedef struct {
 	signed int vel_y;
   	byte dir;
   	int collided:1;
+        int score;
 } Hero;
 
 Hero heros;
@@ -182,6 +183,7 @@ void put_attr_entries(word addr) {
 void update_offscreen() {
   register word addr;
   byte x;
+
   
   // divide x_scroll by 8
   // to get nametable X position
@@ -219,7 +221,7 @@ void check_for_collision(Hero* h){
 
   //checks if player has collided with wall or tail by check if
   //wall or tail will be in x,y coordinate 
-  if (h->y == 240)
+  if (h->y == 238 || h->y == 26)
     h->collided = 1 ;
   
 }
@@ -267,9 +269,10 @@ void scroll_left() {
 // main loop, scrolls left continuously
 void scroll_demo() {
 
+  x_scroll = 0;
   
   new_segment();
-  x_scroll = 0;
+  
   
   // infinite loop
   while (1) {
@@ -286,17 +289,31 @@ void scroll_demo() {
     scroll_left();
     check_for_collision(&heros);
   if(heros.collided == 1){
-    break;
+    	clrscrn();
+    	break;
+  }
     
   }
-  }
+  test_function();
+}
+
+void game_over(){
+  
+  
+  
+}
+
+void clrscrn(){
+  vrambuf_clear();
+  ppu_off();
+  vram_adr(0x2000);
+  vram_fill(0, 32*28);
+  vram_adr(0x0);
 }
 
 void test_function(){
   // write text to name table
-  ppu_off();
-  vrambuf_flush();
-  
+  vrambuf_clear();
   put_str(NTADR_A(7,1), "Nametable A, Line 1");
   put_str(NTADR_A(7,2), "Nametable A, Line 2");
   vram_adr(NTADR_A(0,3));
@@ -311,9 +328,8 @@ void test_function(){
   heros.x = 40;
   heros.y = 120;
   
-
   vrambuf_clear();
-  oam_spr(1, 30, 0xa5, 0, 0);
+  oam_spr(0, 30, 0xa5, 0, 0);
   
   oam_meta_spr(heros.x, heros.y, 4, metasprite);
   
@@ -325,9 +341,9 @@ void test_function(){
   ppu_on_all();
   
  heros.collided =0;
+
   scroll_demo();
-  
-  test_function();
+
 }
 
 
