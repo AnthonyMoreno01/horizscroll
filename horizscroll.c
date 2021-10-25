@@ -43,6 +43,7 @@ byte seg_gap;
 #define PLAYROWS 24
 
 #define TILE 0xd8
+#define TILE1 0xCC
 #define ATTR 02
 
 const unsigned char metasprite[]={
@@ -52,19 +53,15 @@ const unsigned char metasprite[]={
         8,      8,      TILE+3,   ATTR, 
         128};
 
-typedef struct {
-	byte x; // low byte is sub-pixel
-	byte y;
-	signed int vel_x; // speed, signed, low byte is sub-pixel
-	signed int vel_y;
-  	byte dir;
-  	int collided:1;
-        int score;
-} Hero;
+const unsigned char metasprite1[]={
+        0,      0,      TILE,     ATTR, 
+        0,      8,      TILE+1,   ATTR, 
+        8,      0,      TILE+2,   ATTR, 
+        8,      8,      TILE+3,   ATTR, 
+        128};
 
 Hero heros;
-
-
+Heart hearts;
 
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] = { 
@@ -88,6 +85,16 @@ void put_str(unsigned int adr, const char *str) {
   vram_adr(adr);        // set PPU read/write address
   vram_write(str, strlen(str)); // write bytes to PPU
 }
+
+void cputcxy(byte x, byte y, char ch) {
+  vrambuf_put(NTADR_A(x,y), &ch, 1);
+}
+
+//function displayes text
+void cputsxy(byte x, byte y, const char* str) {
+  vrambuf_put(NTADR_A(x,y), str, strlen(str));
+}
+
 
 
 typedef enum { D_RIGHT, D_DOWN, D_LEFT, D_UP } dir_t;
@@ -120,6 +127,7 @@ void new_segment() {
   seg_palette = 3;
   seg_char = 0xf4;
   seg_gap = (rand8() & 3) + 2;
+  
 }
 
 
@@ -146,6 +154,7 @@ void set_attr_entry(byte x, byte y, byte pal) {
 // x = metatile coordinate
 void fill_buffer(byte x) {
   byte i,y;
+
   // clear nametable buffers
   memset(ntbuf1, 0, sizeof(ntbuf1));
   memset(ntbuf2, 0, sizeof(ntbuf2));
@@ -153,13 +162,21 @@ void fill_buffer(byte x) {
   ntbuf1[rand8() & 15] = '.';
   // draw segment slice to both nametable buffers
   for (i=0; i<seg_height; i++) {
-    if( i == seg_gap || i == seg_gap + 1 || i == seg_gap + 2 || i == seg_gap + 3){
-    
+    if( i == seg_gap +1 ){
+      if(seg_width == 5){
+        
+        
+    	        y = PLAYROWS/2-1-i;
+ 
+    		set_metatile(y, 0xCC);
+    		set_attr_entry(x, y, seg_palette);
+    	}
+    }
+    else if(i == seg_gap  || i == seg_gap + 2 || i == seg_gap + 3){
+    	
     }else if
         (seg_width == 3 || seg_width == 2 || seg_width == 1)
   {
-
-  
     }else{
     y = PLAYROWS/2-1-i;
     set_metatile(y, seg_char);
@@ -191,9 +208,10 @@ void update_offscreen() {
   // fill the ntbuf arrays with tiles
   fill_buffer(x/2);
   // get address in either nametable A or B
-  if (x < 32)
+  if (x < 32){
     addr = NTADR_A(x, 4);
-  else
+  
+  }else
     addr = NTADR_B(x&31, 4);
   // draw vertical slice from ntbuf arrays to name table
   // starting with leftmost slice
@@ -218,12 +236,12 @@ void update_offscreen() {
 }
 
 void check_for_collision(Hero* h){
-
-  //checks if player has collided with wall or tail by check if
-  //wall or tail will be in x,y coordinate 
+byte i;
   if (h->y == 238 || h->y == 26)
     h->collided = 1 ;
   
+  if ( i == 0xCC)
+    add_point(&heros);
 }
 
 void move_player(Hero* h){
@@ -245,12 +263,15 @@ void movement(Hero* h){
   
 }
 
+void add_point(Hero* h){
+  h->score++;
+  cputcxy(14,1,heros.score+'0');
+}
 
 // scrolls the screen left one pixel
 void scroll_left() {
-  // update nametable every 16 pixels
-  
 
+  oam_meta_spr(hearts.x, hearts.y, 6, metasprite1);
   if ((x_scroll & 15) == 0) {
     update_offscreen();
     
@@ -287,9 +308,10 @@ void scroll_demo() {
 
     // scroll to the left
     scroll_left();
+    
     check_for_collision(&heros);
   if(heros.collided == 1){
-    	clrscrn();
+    	game_over();
     	break;
   }
     
@@ -300,7 +322,7 @@ void scroll_demo() {
 void game_over(){
   
   
-  
+  clrscrn();
 }
 
 void clrscrn(){
@@ -314,8 +336,10 @@ void clrscrn(){
 void test_function(){
   // write text to name table
   vrambuf_clear();
-  put_str(NTADR_A(7,1), "Nametable A, Line 1");
-  put_str(NTADR_A(7,2), "Nametable A, Line 2");
+  heros.score = 0;
+  //put_str(NTADR_A(7,1), "Score: ");
+   
+  //put_str(NTADR_A(7,2), "Nametable A, Line 2");
   vram_adr(NTADR_A(0,3));
   vram_fill(5, 32);
 
@@ -332,7 +356,6 @@ void test_function(){
   oam_spr(0, 30, 0xa5, 0, 0);
   
   oam_meta_spr(heros.x, heros.y, 4, metasprite);
-  
   // clear vram buffer
   vrambuf_clear();
   set_vram_update(updbuf);
@@ -341,12 +364,11 @@ void test_function(){
   ppu_on_all();
   
  heros.collided =0;
-
+  cputsxy(5,1,"Score:");
+cputcxy(14,1,heros.score+'0');
   scroll_demo();
 
 }
-
-
 
 
 // main function, run after console reset
