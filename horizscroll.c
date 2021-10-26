@@ -61,7 +61,7 @@ const unsigned char metasprite1[]={
         128};
 
 Hero heros;
-Heart hearts;
+
 
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] = { 
@@ -130,6 +130,21 @@ void new_segment() {
   
 }
 
+byte getchar(byte x, byte y) {
+  // compute VRAM read address
+  word addr = NTADR_A(x,y);
+  // result goes into rd
+  byte rd;
+  // wait for VBLANK to start
+  ppu_wait_nmi();
+  // set vram address and read byte into rd
+  vram_adr(addr);
+  vram_read(&rd, 1);
+  // scroll registers are corrupt
+  // fix by setting vram address
+  vram_adr(0x0);
+  return rd;
+}
 
 // draw metatile into nametable buffers
 // y is the metatile coordinate (row * 2)
@@ -236,12 +251,15 @@ void update_offscreen() {
 }
 
 void check_for_collision(Hero* h){
-byte i;
+byte i; 
   if (h->y == 238 || h->y == 26)
     h->collided = 1 ;
   
-  if ( i == 0xCC)
-    add_point(&heros);
+  if( i == 0xCC || i == 0xCD 
+     || i == 0xCE|| i == 0xCF){
+      h->score++;
+      cputcxy(14,1,h->score+'0');
+    }
 }
 
 void move_player(Hero* h){
@@ -265,14 +283,22 @@ void movement(Hero* h){
 
 void add_point(Hero* h){
   h->score++;
-  cputcxy(14,1,heros.score+'0');
+  cputcxy(14,1,h-> score+'0');
 }
 
 // scrolls the screen left one pixel
-void scroll_left() {
+void scroll_left(int x, int y) {
 
-  oam_meta_spr(hearts.x, hearts.y, 6, metasprite1);
+  //oam_meta_spr(hearts.x, hearts.y, 6, metasprite1);
+  
+  if (x == 161){
+    
+  if(y == 90){
+    add_point(&heros);
+  }
+    }
   if ((x_scroll & 15) == 0) {
+    
     update_offscreen();
     
   }
@@ -282,6 +308,7 @@ void scroll_left() {
   // increment x_scroll
   ++x_scroll;
   
+  check_for_collision(&heros);
   move_player(&heros);
   oam_meta_spr(heros.x, heros.y, 4, metasprite);
   
@@ -289,12 +316,14 @@ void scroll_left() {
 
 // main loop, scrolls left continuously
 void scroll_demo() {
-
+int x,y;
   x_scroll = 0;
   
   new_segment();
   
   
+  x = 0;
+  y = 0;
   // infinite loop
   while (1) {
     // ensure VRAM buffer is cleared
@@ -307,9 +336,17 @@ void scroll_demo() {
     split(x_scroll, 0); 
 
     // scroll to the left
-    scroll_left();
+    if(x <= 160){
+    scroll_left(x,y);
+      x++;
+    }else
+    if(x >= 160){
+      scroll_left(x,y); 
+      y++;
+    }
+    if(y == 91)
+      y = 0;
     
-    check_for_collision(&heros);
   if(heros.collided == 1){
     	game_over();
     	break;
