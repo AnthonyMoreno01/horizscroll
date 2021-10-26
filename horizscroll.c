@@ -18,7 +18,7 @@ We also use the split() function to create a status bar.
 #include <nes.h>
 // 0 = horizontal mirroring
 // 1 = vertical mirroring
-#define NES_MIRRORING 1
+//#define NES_MIRRORING 1
 
 
 #include "horizscroll.h"
@@ -37,7 +37,7 @@ byte seg_height;	// segment height in metatiles
 byte seg_width;		// segment width in metatiles
 byte seg_char;		// character to draw
 byte seg_palette;	// attribute table value
-byte seg_gap;
+int seg_gap;
 
 // number of rows in scrolling playfield (without status bar)
 #define PLAYROWS 24
@@ -54,14 +54,14 @@ const unsigned char metasprite[]={
         128};
 
 const unsigned char metasprite1[]={
-        0,      0,      TILE,     ATTR, 
-        0,      8,      TILE+1,   ATTR, 
-        8,      0,      TILE+2,   ATTR, 
-        8,      8,      TILE+3,   ATTR, 
+        0,      0,      TILE1,     ATTR, 
+        0,      8,      TILE1+1,   ATTR, 
+        8,      0,      TILE1+2,   ATTR, 
+        8,      8,      TILE1+3,   ATTR, 
         128};
 
 Hero heros;
-
+Heart hearts;
 
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] = { 
@@ -154,6 +154,10 @@ void set_metatile(byte y, byte ch) {
   ntbuf1[y*2+1] = ch+1;
   ntbuf2[y*2] = ch+2;
   ntbuf2[y*2+1] = ch+3;
+  
+  
+  //hearts.y = y;
+  //oam_meta_spr(hearts.x, hearts.y, 24, metasprite1);
 }
 
 // set attribute table entry in attrbuf
@@ -163,13 +167,15 @@ void set_attr_entry(byte x, byte y, byte pal) {
   if (y&1) pal <<= 4;
   if (x&1) pal <<= 2;
   attrbuf[y/2] |= pal;
+
+  
 }
 
 // fill ntbuf with tile data
 // x = metatile coordinate
 void fill_buffer(byte x) {
-  byte i,y;
-
+  int y;
+  byte i;
   // clear nametable buffers
   memset(ntbuf1, 0, sizeof(ntbuf1));
   memset(ntbuf2, 0, sizeof(ntbuf2));
@@ -180,11 +186,15 @@ void fill_buffer(byte x) {
     if( i == seg_gap +1 ){
       if(seg_width == 5){
         
-        
+        	
     	        y = PLAYROWS/2-1-i;
- 
-    		set_metatile(y, 0xCC);
-    		set_attr_entry(x, y, seg_palette);
+        	hearts.x = 240;
+        	hearts.y = (8 * seg_height) - (seg_gap * 16);
+ 		oam_meta_spr(hearts.x, hearts.y, 24, metasprite1);
+    		//set_metatile(y, 0xCC);
+        
+    		//set_attr_entry(hearts.x, hearts.y, seg_palette);
+       
     	}
     }
     else if(i == seg_gap  || i == seg_gap + 2 || i == seg_gap + 3){
@@ -287,16 +297,13 @@ void add_point(Hero* h){
 }
 
 // scrolls the screen left one pixel
-void scroll_left(int x, int y) {
+void scroll_left() {
 
   //oam_meta_spr(hearts.x, hearts.y, 6, metasprite1);
-  
-  if (x == 161){
-    
-  if(y == 90){
-    add_point(&heros);
-  }
+    if(heros.x == hearts.x && heros.y == hearts.y){
+      add_point(&heros);
     }
+  
   if ((x_scroll & 15) == 0) {
     
     update_offscreen();
@@ -311,19 +318,16 @@ void scroll_left(int x, int y) {
   check_for_collision(&heros);
   move_player(&heros);
   oam_meta_spr(heros.x, heros.y, 4, metasprite);
-  
+   //oam_meta_spr(120, 120, 20, metasprite1);
 }
 
 // main loop, scrolls left continuously
 void scroll_demo() {
-int x,y;
+
   x_scroll = 0;
   
   new_segment();
   
-  
-  x = 0;
-  y = 0;
   // infinite loop
   while (1) {
     // ensure VRAM buffer is cleared
@@ -336,16 +340,8 @@ int x,y;
     split(x_scroll, 0); 
 
     // scroll to the left
-    if(x <= 160){
-    scroll_left(x,y);
-      x++;
-    }else
-    if(x >= 160){
-      scroll_left(x,y); 
-      y++;
-    }
-    if(y == 91)
-      y = 0;
+
+    scroll_left();
     
   if(heros.collided == 1){
     	game_over();
@@ -393,6 +389,8 @@ void test_function(){
   oam_spr(0, 30, 0xa5, 0, 0);
   
   oam_meta_spr(heros.x, heros.y, 4, metasprite);
+  oam_meta_spr(240, 240, 24, metasprite1);
+  //oam_meta_spr(40, 120, 20, metasprite1);
   // clear vram buffer
   vrambuf_clear();
   set_vram_update(updbuf);
