@@ -5,10 +5,14 @@ typedef struct {
   	byte dir;
   	int collided:1;
         word bit1;
-  word bit2;
-  word bit3;
-  word bit4;
-
+  	word bit2;
+  	word bit3;
+  	word bit4;
+	
+  	unsigned char asset1;
+  	unsigned char asset2;
+  	unsigned char asset3;
+  	unsigned char asset4;
 } Hero;
 
 typedef struct {

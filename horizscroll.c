@@ -19,7 +19,7 @@ We also use the split() function to create a status bar.
 
 // 0 = horizontal mirroring
 // 1 = vertical mirroring
-//#define NES_MIRRORING 1
+#define NES_MIRRORING 1
 
 
 #include "horizscroll.h"
@@ -64,6 +64,11 @@ const unsigned char metasprite1[]={
 
 Hero heros;
 Heart hearts;
+unsigned char block1 = 0xf4;
+unsigned char block2 = 0xf5;
+unsigned char block3 = 0xf6;
+unsigned char block4 = 0xf7;
+
 
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] = { 
@@ -86,6 +91,22 @@ const char PALETTE[32] = {
 void put_str(unsigned int adr, const char *str) {
   vram_adr(adr);        // set PPU read/write address
   vram_write(str, strlen(str)); // write bytes to PPU
+}
+
+byte getchar(byte x, byte y) {
+  // compute VRAM read address
+  word addr = NTADR_A(x,y);
+  // result goes into rd
+  byte rd;
+  // wait for VBLANK to start
+  ppu_wait_nmi();
+  // set vram address and read byte into rd
+  vram_adr(addr);
+  vram_read(&rd, 1);
+  // scroll registers are corrupt
+  // fix by setting vram address
+  vram_adr(0x0);
+  return rd;
 }
 
 void cputcxy(byte x, byte y, char ch) {
@@ -234,7 +255,10 @@ void check_for_collision(Hero* h){
 
   if (h->y == 238 || h->y == 26)
     h->collided = 1 ;
-  
+ 
+//if( seg_char && getchar(h->x,h->y) == 0)
+ // add_point(h);
+  //h->collided = 1 ;
 
 }
 
@@ -408,7 +432,7 @@ void test_function(){
   // set sprite 0
   oam_clear();
   
-  heros.x = 120;
+  heros.x = 50;
   heros.y = 120;
   
   
@@ -437,7 +461,10 @@ void test_function(){
 // main function, run after console reset
 void main(void) {
 pal_all(PALETTE);
-
+heros.asset1  = 0xf4;
+  heros.asset2 = TILE+1;
+  heros.asset3 = TILE+2;
+  heros.asset4 = TILE+3;
   // get data for initial segment
 
   test_function();
