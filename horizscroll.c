@@ -46,6 +46,7 @@ int seg_gap;
 #define TILE 0xd8
 #define TILE1 0xCC
 #define ATTR 02
+#define ATTR1 03
 
 const unsigned char metasprite[]={
         0,      0,      TILE,     ATTR, 
@@ -55,15 +56,15 @@ const unsigned char metasprite[]={
         128};
 
 const unsigned char metasprite1[]={
-        0,      0,      TILE1,     ATTR, 
-        0,      8,      TILE1+1,   ATTR, 
-        8,      0,      TILE1+2,   ATTR, 
-        8,      8,      TILE1+3,   ATTR, 
+        0,      0,      TILE1,     ATTR1, 
+        0,      8,      TILE1+1,   ATTR1, 
+        8,      0,      TILE1+2,   ATTR1, 
+        8,      8,      TILE1+3,   ATTR1, 
         128};
 
 Hero heros;
-Heart hearts[50];
-char t = 0;
+Heart hearts[4];
+byte t;
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] = { 
   0x03,			// background color
@@ -177,6 +178,7 @@ void set_attr_entry(byte x, byte y, byte pal) {
 void fill_buffer(byte x) {
   int y;
   byte i;
+  size_t n = sizeof(t);
   // clear nametable buffers
   memset(ntbuf1, 0, sizeof(ntbuf1));
   memset(ntbuf2, 0, sizeof(ntbuf2));
@@ -187,14 +189,16 @@ void fill_buffer(byte x) {
     if( i == seg_gap +1 ){
       if(seg_width == 4){
         
-        	
+        	if(n == 3){
+                 
+                }else{
     	        y = PLAYROWS/2-1-i;
         	hearts[t].x = 240;
         	hearts[t].y = (8 * seg_height) - (seg_gap * 16);
- 		oam_meta_spr(hearts[t].x, hearts[t].y, (20 * t) + 20, metasprite1);
+ 		oam_meta_spr(hearts[t].x, hearts[t].y, (24 * t) + 24, metasprite1);
         	t++;
     		//set_metatile(y, 0xCC);
-        
+                }
     		//set_attr_entry(hearts.x, hearts.y, seg_palette);
        
     	}
@@ -318,20 +322,33 @@ byte i;
   check_for_collision(&heros);
   move_player(&heros);
   oam_meta_spr(heros.x, heros.y, 4, metasprite);
+  
   for(i = 0; i < t; i++){
-    hearts[i].x--;
-   oam_meta_spr(hearts[i].x , hearts[i].y, (20 * i) + 20, metasprite1);
     
+    if(hearts[i].x == 255){
+      oam_meta_spr(248 , hearts[i].y, (24 * i) + 24, metasprite1);
+      t--;
+    }else{
+   	hearts[i].x = hearts[i].x -2;
+          if(heros.x == hearts[i].x && heros.y == hearts[i].y){
+      
+      		add_point(&heros);
+            t--;
+      
+    }
+      
+   oam_meta_spr(hearts[i].x , hearts[i].y, (24 * i) + 24, metasprite1);
+      
+    }  
   }
 }
   
 
 // main loop, scrolls left continuously
 void scroll_demo() {
-int i;
+byte i;
   x_scroll = 0;
   
-  i = 0;
   new_segment();
   
   // infinite loop
@@ -348,9 +365,9 @@ int i;
     // scroll to the left
 
     scroll_left();
-    if(heros.x == hearts[i].x && heros.y == hearts[i].y){
-      
-      add_point(&heros);
+    for( i = 0; i <= t; i++){
+     
+
     }
   if(heros.collided == 1){
     	game_over();
@@ -393,13 +410,13 @@ void test_function(){
   // set sprite 0
   oam_clear();
   
-  heros.x = 40;
+  heros.x = 120;
   heros.y = 120;
   
   vrambuf_clear();
   oam_spr(0, 30, 0xa5, 0, 0);
   
-  oam_meta_spr(heros.x, heros.y, 4, metasprite);
+  //oam_meta_spr(heros.x, heros.y, 4, metasprite);
 
   // clear vram buffer
   vrambuf_clear();
