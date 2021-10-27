@@ -63,8 +63,8 @@ const unsigned char metasprite1[]={
         128};
 
 Hero heros;
-Heart hearts[4];
-byte t;
+Heart hearts;
+
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] = { 
   0x03,			// background color
@@ -96,7 +96,6 @@ void cputcxy(byte x, byte y, char ch) {
 void cputsxy(byte x, byte y, const char* str) {
   vrambuf_put(NTADR_A(x,y), str, strlen(str));
 }
-
 
 
 typedef enum { D_RIGHT, D_DOWN, D_LEFT, D_UP } dir_t;
@@ -132,22 +131,6 @@ void new_segment() {
   
 }
 
-byte getchar(byte x, byte y) {
-  // compute VRAM read address
-  word addr = NTADR_A(x,y);
-  // result goes into rd
-  byte rd;
-  // wait for VBLANK to start
-  ppu_wait_nmi();
-  // set vram address and read byte into rd
-  vram_adr(addr);
-  vram_read(&rd, 1);
-  // scroll registers are corrupt
-  // fix by setting vram address
-  vram_adr(0x0);
-  return rd;
-}
-
 // draw metatile into nametable buffers
 // y is the metatile coordinate (row * 2)
 // ch is the starting tile index in the pattern table
@@ -157,9 +140,6 @@ void set_metatile(byte y, byte ch) {
   ntbuf2[y*2] = ch+2;
   ntbuf2[y*2+1] = ch+3;
   
-  
-  //hearts.y = y;
-  //oam_meta_spr(hearts.x, hearts.y, 24, metasprite1);
 }
 
 // set attribute table entry in attrbuf
@@ -176,9 +156,8 @@ void set_attr_entry(byte x, byte y, byte pal) {
 // fill ntbuf with tile data
 // x = metatile coordinate
 void fill_buffer(byte x) {
-  int y;
-  byte i;
-  size_t n = sizeof(t);
+byte i,y;
+
   // clear nametable buffers
   memset(ntbuf1, 0, sizeof(ntbuf1));
   memset(ntbuf2, 0, sizeof(ntbuf2));
@@ -187,21 +166,7 @@ void fill_buffer(byte x) {
   // draw segment slice to both nametable buffers
   for (i=0; i<seg_height; i++) {
     if( i == seg_gap +1 ){
-      if(seg_width == 4){
-        
-        	if(n == 3){
-                 
-                }else{
-    	        y = PLAYROWS/2-1-i;
-        	hearts[t].x = 240;
-        	hearts[t].y = (8 * seg_height) - (seg_gap * 16);
- 		oam_meta_spr(hearts[t].x, hearts[t].y, (24 * t) + 24, metasprite1);
-        	t++;
-    		//set_metatile(y, 0xCC);
-                }
-    		//set_attr_entry(hearts.x, hearts.y, seg_palette);
-       
-    	}
+
     }
     else if(i == seg_gap  || i == seg_gap + 2 || i == seg_gap + 3){
     	
@@ -232,7 +197,6 @@ void update_offscreen() {
   register word addr;
   byte x;
 
-  
   // divide x_scroll by 8
   // to get nametable X position
   x = (x_scroll/8 + 32) & 63;
@@ -260,22 +224,17 @@ void update_offscreen() {
   // decrement segment width, create new segment when it hits zero
 
   if (--seg_width == 0) {
-
     new_segment();
   }
   
 }
 
 void check_for_collision(Hero* h){
-byte i; 
+
   if (h->y == 238 || h->y == 26)
     h->collided = 1 ;
   
-  if( i == 0xCC || i == 0xCD 
-     || i == 0xCE|| i == 0xCF){
-      h->score++;
-      cputcxy(14,1,h->score+'0');
-    }
+
 }
 
 void move_player(Hero* h){
@@ -298,14 +257,48 @@ void movement(Hero* h){
 }
 
 void add_point(Hero* h){
-  h->score++;
-  cputcxy(14,1,h-> score+'0');
+  
+  
+  h->bit1++;
+  if(h->bit3 == 10){
+  h-> bit1 = 0;
+  h-> bit2 = 0;
+  h-> bit3 = 0;
+  h-> bit4++;
+  cputcxy(14,1,h-> bit4+'0');
+  cputcxy(15,1,h-> bit3+'0');
+  cputcxy(16,1,h-> bit2+'0');
+  cputcxy(17,1,h-> bit1+'0');
+    
+  }else if(h->bit2 ==  10){
+    
+  h-> bit1 = 0; 
+  h-> bit2 = 0;
+  h-> bit3++;
+  cputcxy(15,1,h-> bit3+'0');
+  cputcxy(16,1,h->bit2+'0');
+  cputcxy(17,1,h-> bit1+'0');
+    
+  }else if(h->bit1 == 10){
+  h-> bit1 = 0;
+  h-> bit2++;
+  cputcxy(16,1,h->bit2+'0');
+  cputcxy(17,1,h-> bit1+'0');
+    
+  }else{
+  
+  cputcxy(17,1,h-> bit1+'0');
+}
 }
 
+void spawn_item(Heart* h){
+  h->x = 240;
+  h->y = (8 * seg_height) - (seg_gap * 16);
+  oam_meta_spr( h->x , h->y, 24, metasprite1);
+  
+}
 // scrolls the screen left one pixel
 void scroll_left() {
-byte i;
-  //oam_meta_spr(hearts.x, hearts.y, 6, metasprite1);
 
   
   if ((x_scroll & 15) == 0) {
@@ -313,7 +306,9 @@ byte i;
     update_offscreen();
     
   }
-  if((x_scroll & 3) == 0){
+  
+  
+  if((x_scroll & 2) == 0){
     movement(&heros);
   }
   // increment x_scroll
@@ -321,36 +316,38 @@ byte i;
   
   check_for_collision(&heros);
   move_player(&heros);
-  oam_meta_spr(heros.x, heros.y, 4, metasprite);
   
-  for(i = 0; i < t; i++){
-    
-    if(hearts[i].x == 255){
-      oam_meta_spr(248 , hearts[i].y, (24 * i) + 24, metasprite1);
-      t--;
+  
+          if(heros.x == hearts.x ){
+            if(heros.y == hearts.y){
+      		hearts.x = NULL;
+            	hearts.y = NULL;
+            	oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
+              add_point(&heros);
+      		 spawn_item(&hearts);
+            }
+      
     }else{
-   	hearts[i].x = hearts[i].x -2;
-          if(heros.x == hearts[i].x && heros.y == hearts[i].y){
+            hearts.x = hearts.x -1;
+            oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
+          }
       
-      		add_point(&heros);
-            t--;
-      
-    }
-      
-   oam_meta_spr(hearts[i].x , hearts[i].y, (24 * i) + 24, metasprite1);
-      
-    }  
-  }
+    
+    oam_meta_spr(heros.x, heros.y, 4, metasprite);  
+  
 }
   
 
 // main loop, scrolls left continuously
 void scroll_demo() {
-byte i;
-  x_scroll = 0;
+
+  
+  
+  
   
   new_segment();
-  
+  x_scroll = 0;
+  spawn_item(&hearts);
   // infinite loop
   while (1) {
     // ensure VRAM buffer is cleared
@@ -365,10 +362,7 @@ byte i;
     // scroll to the left
 
     scroll_left();
-    for( i = 0; i <= t; i++){
-     
 
-    }
   if(heros.collided == 1){
     	game_over();
     	break;
@@ -382,7 +376,7 @@ void game_over(){
 
   
   clrscrn();
-  t = 0;
+
 }
 
 void clrscrn(){
@@ -397,7 +391,10 @@ void test_function(){
   // write text to name table
 
   vrambuf_clear();
-  heros.score = 0;
+  heros.bit1 = 0;
+  heros.bit2 = 0;
+  heros.bit3 = 0;
+  heros.bit4 = 0;
   //put_str(NTADR_A(7,1), "Score: ");
   
   //put_str(NTADR_A(7,2), "Nametable A, Line 2");
@@ -413,10 +410,10 @@ void test_function(){
   heros.x = 120;
   heros.y = 120;
   
+  
   vrambuf_clear();
   oam_spr(0, 30, 0xa5, 0, 0);
   
-  //oam_meta_spr(heros.x, heros.y, 4, metasprite);
 
   // clear vram buffer
   vrambuf_clear();
@@ -427,7 +424,10 @@ void test_function(){
   
  heros.collided =0;
   cputsxy(5,1,"Score:");
-cputcxy(14,1,heros.score+'0');
+  cputcxy(14,1,'0');
+  cputcxy(15,1,'0');
+  cputcxy(16,1,'0');
+  cputcxy(17,1,'0');
   scroll_demo();
 
 }
