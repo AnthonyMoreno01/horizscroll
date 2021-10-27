@@ -46,7 +46,7 @@ int seg_gap;
 #define TILE 0xd8
 #define TILE1 0xCC
 #define ATTR 02
-#define ATTR1 03
+#define ATTR1 01
 
 const unsigned char metasprite[]={
         0,      0,      TILE,     ATTR, 
@@ -127,7 +127,8 @@ void new_segment() {
   seg_width = 6;
   seg_palette = 3;
   seg_char = 0xf4;
-  seg_gap = (rand8() & 3) + 2;
+  //seg_gap = (rand8() & 3) + 2;
+  seg_gap = 4;
   
 }
 
