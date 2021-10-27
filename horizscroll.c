@@ -16,6 +16,7 @@ We also use the split() function to create a status bar.
 #include <string.h>
 #include <joystick.h>
 #include <nes.h>
+
 // 0 = horizontal mirroring
 // 1 = vertical mirroring
 //#define NES_MIRRORING 1
@@ -61,8 +62,8 @@ const unsigned char metasprite1[]={
         128};
 
 Hero heros;
-Heart hearts;
-
+Heart hearts[50];
+char t = 0;
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] = { 
   0x03,			// background color
@@ -184,13 +185,14 @@ void fill_buffer(byte x) {
   // draw segment slice to both nametable buffers
   for (i=0; i<seg_height; i++) {
     if( i == seg_gap +1 ){
-      if(seg_width == 5){
+      if(seg_width == 4){
         
         	
     	        y = PLAYROWS/2-1-i;
-        	hearts.x = 240;
-        	hearts.y = (8 * seg_height) - (seg_gap * 16);
- 		oam_meta_spr(hearts.x, hearts.y, 24, metasprite1);
+        	hearts[t].x = 240;
+        	hearts[t].y = (8 * seg_height) - (seg_gap * 16);
+ 		oam_meta_spr(hearts[t].x, hearts[t].y, (20 * t) + 20, metasprite1);
+        	t++;
     		//set_metatile(y, 0xCC);
         
     		//set_attr_entry(hearts.x, hearts.y, seg_palette);
@@ -298,11 +300,9 @@ void add_point(Hero* h){
 
 // scrolls the screen left one pixel
 void scroll_left() {
-
+byte i;
   //oam_meta_spr(hearts.x, hearts.y, 6, metasprite1);
-    if(heros.x == hearts.x && heros.y == hearts.y){
-      add_point(&heros);
-    }
+
   
   if ((x_scroll & 15) == 0) {
     
@@ -318,14 +318,20 @@ void scroll_left() {
   check_for_collision(&heros);
   move_player(&heros);
   oam_meta_spr(heros.x, heros.y, 4, metasprite);
-   //oam_meta_spr(120, 120, 20, metasprite1);
+  for(i = 0; i < t; i++){
+    hearts[i].x--;
+   oam_meta_spr(hearts[i].x , hearts[i].y, (20 * i) + 20, metasprite1);
+    
+  }
 }
+  
 
 // main loop, scrolls left continuously
 void scroll_demo() {
-
+int i;
   x_scroll = 0;
   
+  i = 0;
   new_segment();
   
   // infinite loop
@@ -342,7 +348,10 @@ void scroll_demo() {
     // scroll to the left
 
     scroll_left();
-    
+    if(heros.x == hearts[i].x && heros.y == hearts[i].y){
+      
+      add_point(&heros);
+    }
   if(heros.collided == 1){
     	game_over();
     	break;
@@ -353,9 +362,10 @@ void scroll_demo() {
 }
 
 void game_over(){
-  
+
   
   clrscrn();
+  t = 0;
 }
 
 void clrscrn(){
@@ -368,10 +378,11 @@ void clrscrn(){
 
 void test_function(){
   // write text to name table
+
   vrambuf_clear();
   heros.score = 0;
   //put_str(NTADR_A(7,1), "Score: ");
-   
+  
   //put_str(NTADR_A(7,2), "Nametable A, Line 2");
   vram_adr(NTADR_A(0,3));
   vram_fill(5, 32);
@@ -389,8 +400,7 @@ void test_function(){
   oam_spr(0, 30, 0xa5, 0, 0);
   
   oam_meta_spr(heros.x, heros.y, 4, metasprite);
-  oam_meta_spr(240, 240, 24, metasprite1);
-  //oam_meta_spr(40, 120, 20, metasprite1);
+
   // clear vram buffer
   vrambuf_clear();
   set_vram_update(updbuf);
