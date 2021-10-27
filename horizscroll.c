@@ -127,8 +127,8 @@ void new_segment() {
   seg_width = 6;
   seg_palette = 3;
   seg_char = 0xf4;
-  //seg_gap = (rand8() & 3) + 2;
-  seg_gap = 4;
+  seg_gap = (rand8() & 3) + 2;
+  //seg_gap = 4;
   
 }
 
