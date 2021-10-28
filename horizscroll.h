@@ -9,10 +9,10 @@ typedef struct {
   	word bit3;
   	word bit4;
 	
-  	unsigned char asset1;
-  	unsigned char asset2;
-  	unsigned char asset3;
-  	unsigned char asset4;
+  	 char asset1;
+  	 char asset2;
+  	 char asset3;
+  	 char asset4;
 } Hero;
 
 typedef struct {

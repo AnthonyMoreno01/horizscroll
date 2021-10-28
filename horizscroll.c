@@ -38,8 +38,8 @@ byte seg_height;	// segment height in metatiles
 byte seg_width;		// segment width in metatiles
 byte seg_char;		// character to draw
 byte seg_palette;	// attribute table value
-int seg_gap;
-
+byte seg_gap;
+int t;
 // number of rows in scrolling playfield (without status bar)
 #define PLAYROWS 24
 
@@ -64,10 +64,10 @@ const unsigned char metasprite1[]={
 
 Hero heros;
 Heart hearts;
-unsigned char block1 = 0xf4;
-unsigned char block2 = 0xf5;
-unsigned char block3 = 0xf6;
-unsigned char block4 = 0xf7;
+ char block1 = 0xf4;
+ char block2 = 0xf5;
+ char block3 = 0xf6;
+ char block4 = 0xf7;
 
 
 /*{pal:"nes",layout:"nes"}*/
@@ -145,7 +145,7 @@ word nt2attraddr(word a) {
 // generate new segment
 void new_segment() {
   seg_height = PLAYROWS;
-  seg_width = 6;
+  seg_width = 3;
   seg_palette = 3;
   seg_char = 0xf4;
   seg_gap = (rand8() & 3) + 2;
@@ -192,9 +192,9 @@ byte i,y;
     }
     else if(i == seg_gap  || i == seg_gap + 2 || i == seg_gap + 3){
     	
-    }else if
-        (seg_width == 3 || seg_width == 2 || seg_width == 1)
-  {
+    //}else if
+        //(seg_width == 3 || seg_width == 2 || seg_width == 1)
+  //{
     }else{
     y = PLAYROWS/2-1-i;
     set_metatile(y, seg_char);
@@ -252,14 +252,20 @@ void update_offscreen() {
 }
 
 void check_for_collision(Hero* h){
-
   if (h->y == 238 || h->y == 26)
     h->collided = 1 ;
- 
-//if( seg_char && getchar(h->x,h->y) == 0)
- // add_point(h);
-  //h->collided = 1 ;
 
+
+}
+
+void check_for_wall(Hero* h){
+  char i;
+  
+      i = getchar(h->x, h->y);
+   
+	if( i == block1 || i == block2 || i == block3 || i == block4){
+           h->collided = 1 ;
+        }
 }
 
 void move_player(Hero* h){
@@ -325,7 +331,6 @@ void spawn_item(Heart* h){
 // scrolls the screen left one pixel
 void scroll_left() {
 
-  
   if ((x_scroll & 15) == 0) {
     
     update_offscreen();
@@ -336,13 +341,16 @@ void scroll_left() {
   if((x_scroll & 2) == 0){
     movement(&heros);
   }
-  // increment x_scroll
-  ++x_scroll;
+ 
   
   check_for_collision(&heros);
   move_player(&heros);
   
-  
+  if (t == 120){
+    check_for_wall(&heros);
+    t=0;
+  }
+     
           if(heros.x == hearts.x ){
             if(heros.y == hearts.y){
       		hearts.x = NULL;
@@ -355,53 +363,51 @@ void scroll_left() {
     }else{
             hearts.x = hearts.x -1;
             oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
-          }
-      
-    
+          
+}
     oam_meta_spr(heros.x, heros.y, 4, metasprite);  
-  
+   // increment x_scroll
+  ++x_scroll;
+  t++;
 }
   
 
 // main loop, scrolls left continuously
-void scroll_demo() {
+void scroll_demo() 
+{
 
   
   
-  
-  
+
   new_segment();
   x_scroll = 0;
   spawn_item(&hearts);
   // infinite loop
-  while (1) {
+  while (1) 
+  {
     // ensure VRAM buffer is cleared
-    
     ppu_wait_nmi();
-    
     vrambuf_clear();
-    
     // split at sprite zero and set X scroll
     split(x_scroll, 0); 
-
     // scroll to the left
-
     scroll_left();
 
-  if(heros.collided == 1){
+  if(heros.collided == 1)
+  	{
     	game_over();
     	break;
+  	}
   }
-    
-  }
+   
   test_function();
 }
 
+
+
 void game_over(){
-
-  
   clrscrn();
-
+  t = 0;
 }
 
 void clrscrn(){
@@ -413,38 +419,30 @@ void clrscrn(){
 }
 
 void test_function(){
-  // write text to name table
-
+  
   vrambuf_clear();
   heros.bit1 = 0;
   heros.bit2 = 0;
   heros.bit3 = 0;
   heros.bit4 = 0;
-  //put_str(NTADR_A(7,1), "Score: ");
-  
-  //put_str(NTADR_A(7,2), "Nametable A, Line 2");
+
   vram_adr(NTADR_A(0,3));
   vram_fill(5, 32);
 
   vram_adr(0x23c0);
   vram_fill(0x55, 8);
-  
-  // set sprite 0
+
   oam_clear();
   
-  heros.x = 50;
+  heros.x = 48;
   heros.y = 120;
-  
   
   vrambuf_clear();
   oam_spr(0, 30, 0xa5, 0, 0);
-  
 
-  // clear vram buffer
   vrambuf_clear();
   set_vram_update(updbuf);
   
-  // enable PPU rendering (turn on screen)
   ppu_on_all();
   
  heros.collided =0;
@@ -457,15 +455,12 @@ void test_function(){
 
 }
 
-
-// main function, run after console reset
 void main(void) {
 pal_all(PALETTE);
-heros.asset1  = 0xf4;
-  heros.asset2 = TILE+1;
-  heros.asset3 = TILE+2;
-  heros.asset4 = TILE+3;
-  // get data for initial segment
+  heros.asset1 = 0xf4;
+  heros.asset2 = 0xf4+1;
+  heros.asset3 = 0xf4+2;
+  heros.asset4 = 0xf4+3;
 
   test_function();
 
