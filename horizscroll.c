@@ -16,18 +16,23 @@ byte seg_height;	// segment height in metatiles
 byte seg_width;		// segment width in metatiles
 byte seg_char;		// character to draw
 byte seg_palette;	// attribute table value
-byte seg_gap;
-int t;
+byte seg_gap;		// segment gap in metatile tower
+int frm_cnt;		// frame counter
 
+// initialize block values to check later
+char block1 = 0xf4;
+char block2 = 0xf5;
+char block3 = 0xf6;
+char block4 = 0xf7;
 
 // 0 = horizontal mirroring
 // 1 = vertical mirroring
 #define NES_MIRRORING 1
-#define PLAYROWS 24
-#define TILE 0xd8
-#define TILE1 0xCC
-#define ATTR 02
-#define ATTR1 01
+#define PLAYROWS 24	// max tile height / 2
+#define TILE 0xd8	// playable character attributes
+#define TILE1 0xCC	// heart attributes
+#define ATTR1 01	// heart attributes
+#define ATTR 02		// character attributes
 
 const unsigned char metasprite[]={
         0,      0,      TILE,     ATTR, 
@@ -43,13 +48,11 @@ const unsigned char metasprite1[]={
         8,      8,      TILE1+3,   ATTR1, 
         128};
 
+// initializes heart and hero 
 Hero heros;
 Heart hearts;
 
- char block1 = 0xf4;
- char block2 = 0xf5;
- char block3 = 0xf6;
- char block4 = 0xf7;
+
 
 
 /*{pal:"nes",layout:"nes"}*/
@@ -310,53 +313,62 @@ void spawn_item(Heart* h){
   oam_meta_spr( h->x , h->y, 24, metasprite1);
   
 }
+
 // scrolls the screen left one pixel
+// updates off screen tiles every 15 frames
+// checks input from user ever 2 frames
+// checks for collision with top and bottom barriers restarts game if true
+// moves player up and down if false
+// checks for collission with tiles every 120 frames(buggy) if true restart else reset counter and continue
+// checks for hero and heart coordinates. if coordinates match +1 spawn new item
+// if false move heart and player
+// increment frm count and scroll count both similar but different functionality throughout code base
 void scroll_left() {
 
-  if ((x_scroll & 15) == 0) {
-    
+  if ((x_scroll & 15) == 0) 
+  {
     update_offscreen();
-    
   }
   
-  
-  if((x_scroll & 2) == 0){
+  if((x_scroll & 2) == 0)
+  {
     movement(&heros);
   }
- 
   
   check_for_collision(&heros);
   move_player(&heros);
   
-  if (t == 120){
+  if(frm_cnt == 120)
+  {
     check_for_wall(&heros);
-    t=0;
+    frm_cnt=0;
   }
-     
-          if(heros.x == hearts.x ){
-            if(heros.y == hearts.y){
-      		hearts.x = NULL;
-            	hearts.y = NULL;
-            	oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
-              add_point(&heros);
-      		 spawn_item(&hearts);
-            }
-      
-    }else{
-            hearts.x = hearts.x -1;
-            oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
-          
-}
-    oam_meta_spr(heros.x, heros.y, 4, metasprite);  
-   // increment x_scroll
+    if(heros.x == hearts.x )
+    {
+      if(heros.y == hearts.y)
+      {
+      	hearts.x = NULL;
+        hearts.y = NULL;
+        oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
+        add_point(&heros);
+      	spawn_item(&hearts);
+      }
+    }else
+    {
+    hearts.x = hearts.x -1;
+    oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
+    }
+  oam_meta_spr(heros.x, heros.y, 4, metasprite);  
   ++x_scroll;
-  t++;
+  frm_cnt++;
 }
   
-
+// scrolls the screen left one pixel
+// updates off screen tiles every 15 frames
+// move heart sprite
 void title_screen_scroll() {
 
-  if ((x_scroll & 15) == 0) 
+  if((x_scroll & 15) == 0) 
   {
     update_offscreen();
   }
@@ -415,12 +427,12 @@ void scroll_title_screen(){
     
 
     
-    if(t == 45){
+    if(frm_cnt == 45){
       cputsxy(5,10,"Press Enter to Start");
       cputsxy(5,15,"Press Enter to Start");
       cputsxy(5,20,"Press Enter to Start");
 
-      t= 0;
+      frm_cnt= 0;
     }
     joy = joy_read (JOY_1);
       
@@ -429,14 +441,14 @@ void scroll_title_screen(){
         break;
       }
     
-  t++;
+  frm_cnt++;
   }
 }
 
 
 void game_over(){
   clrscrn();
-  t = 0;
+  frm_cnt = 0;
 }
 
 
