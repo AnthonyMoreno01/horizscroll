@@ -13,7 +13,8 @@
 /*
 to see what we attempted 
 
-ucomment  seg width to 6
+uncomment seg_width = 6;
+comment   seg_palette = 3;
 uncomment code in fill buffer
 cry when you see how bad it is. 
 
