@@ -1,12 +1,17 @@
 /*
 to see what we attempted 
-uncomment seg_width=6;
-comment seg_width=3;
+  make changes in new_segment()
+  uncomment seg_width=6;
+  comment seg_width=3;
+  make changes in set_attr_entry(byte x, byte y, byte pal)
+  uncomment code with label
+  " Uncomment the below code to test "
 
-cry when you see how bad it is.
-
-to remove collision comment out
-check_for_wall(&heros) in scroll left function
+to add collision
+  make changes in scroll_left()
+  uncomment code with label 
+  " uncomment to test collission "
+  cry when you see how bad it is.
 */
 
 #include "neslib.h"
@@ -373,7 +378,8 @@ void scroll_left()
   move_player(&heros);  
   if(frm_cnt == 120)
   {
-    check_for_wall(&heros);
+    /* uncomment to test collission */
+    //check_for_wall(&heros);
     frm_cnt=0;
   }
     if(heros.x == hearts.x )
@@ -401,7 +407,6 @@ void scroll_left()
 // move heart sprite
 void title_screen_scroll() 
 {
-
   if((x_scroll & 15) == 0) 
   {
     update_offscreen();
@@ -419,7 +424,6 @@ void title_screen_scroll()
 // break and call initialize game
 void main_scroll() 
 {
-
   new_segment();
   x_scroll = 0;
   spawn_item(&hearts);
@@ -434,13 +438,12 @@ void main_scroll()
     // scroll to the left
     scroll_left();
 
-  if(heros.collided == 1)
-  	{
-    	game_over();
-    	break;
-  	}
-  }
-   
+    if(heros.collided == 1)
+    {
+    game_over();
+    break;
+    }
+  } 
   init_game();
 }
 
@@ -464,16 +467,14 @@ void scroll_title_screen()
     title_screen_scroll();
     heros.x = NULL;
     heros.y = 230;
-    
-    if(frm_cnt == 45){
+    if(frm_cnt == 45)
+    {
       cputsxy(5,10,"Press Enter to Start");
       cputsxy(5,15,"Press Enter to Start");
       cputsxy(5,20,"Press Enter to Start");
-
       frm_cnt= 0;
     }
-    joy = joy_read (JOY_1);
-      
+    joy = joy_read (JOY_1);   
       if(joy){
         clrscrn();
         break;
@@ -506,9 +507,7 @@ void title_screen()
   vrambuf_clear();
   oam_spr(0, 0, 0xa4, 0, 0);
   set_vram_update(updbuf);
-  
   ppu_on_all();
-  
   cputsxy(6,1,"Infiniscroll");
   cputsxy(12,2,"Anthony Moreno ");
   cputsxy(15,3,"Alessandro Abarca");
