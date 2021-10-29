@@ -13,7 +13,7 @@ to add collision
   " uncomment to test collission "
   cry when you see how bad it is.
 */
-
+#include <stdlib.h>
 #include "neslib.h"
 #include <string.h>
 #include <joystick.h>
@@ -62,12 +62,11 @@ const char DIR_Y[4] = { 0, 2, 0, -2 };
 
 // a vertical slice of attribute table entries
 char attrbuf[PLAYROWS/4];
+
 //#link "famitone2.s"
 void __fastcall__ famitone_update(void);
 //#link "music_aftertherain.s"
 extern char after_the_rain_music_data[];
-//#link "music_dangerstreets.s"
-extern char danger_streets_music_data[];
 //#link "demosounds.s"
 extern char demo_sounds[];
 
@@ -90,7 +89,6 @@ const unsigned char metasprite1[]={
 // initializes heart and hero 
 Hero heros;
 Heart hearts;
-
 
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] = 
@@ -346,6 +344,7 @@ void add_point(Hero* h)
 //spawn a new heart at 240 x and y is set to the segment gap +1
 void spawn_item(Heart* h)
 {
+    sfx_play(1,0);
   h->x = 240;
   h->y = (8 * seg_height) - (seg_gap * 16);
   oam_meta_spr( h->x , h->y, 24, metasprite1);
@@ -357,10 +356,11 @@ void spawn_item(Heart* h)
 // checks input from user ever 2 frames
 // checks for collision with top and bottom barriers restarts game if true
 // moves player up and down if false
-// checks for collission with tiles every 120 frames(buggy) if true restart else reset counter and continue
+// checks for collission with tiles every 120 frames(buggy) 
+// if true restart else reset counter and continue
 // checks for hero and heart coordinates. if coordinates match +1 spawn new item
 // if false move heart and player
-// increment frm count and scroll count both similar but different functionality throughout code base
+// increment frm count and scroll count similar but different functionality
 void scroll_left() 
 {
   if ((x_scroll & 15) == 0) 
@@ -426,6 +426,7 @@ void title_screen_scroll()
 // break and call initialize game
 void main_scroll() 
 {
+
   new_segment();
   x_scroll = 0;
   spawn_item(&hearts);
@@ -451,7 +452,9 @@ void main_scroll()
 // copy of main_scroll for title screen
 void scroll_title_screen()
 {
+  
   byte joy;
+  
   new_segment();
   x_scroll = 0;
   spawn_item(&hearts);
@@ -510,6 +513,7 @@ void clrscrn()
 
 void title_screen()
 {
+  
   vrambuf_clear();
   oam_spr(0, 0, 0xa4, 0, 0);
   set_vram_update(updbuf);
@@ -525,12 +529,6 @@ void title_screen()
 // call scroll title screen
 void init_game()
 {
-  
-  famitone_init(danger_streets_music_data);
-  //sfx_init(demo_sounds);
-  music_play(0);
-  // set music callback function for NMI
-  nmi_set_callback(famitone_update);
   vrambuf_clear();
   
   heros.bit1 = 0;
@@ -566,9 +564,21 @@ void init_game()
 
 void main(void) 
 {
+  
+  /* Uncomment below code to hear sound. Headphone warning*/ 
+  //famitone_init(after_the_rain_music_data);
+  //sfx_init(demo_sounds);
+  // set music callback function for NMI
+  //nmi_set_callback(famitone_update);
+  // play music
+  
+  //music_play(5);
+  //music_stop();
+  
   pal_all(PALETTE);
   joy_install (joy_static_stddrv);
   oam_clear();
   title_screen();
+  
   init_game();    
 }
