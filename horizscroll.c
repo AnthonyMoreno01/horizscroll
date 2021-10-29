@@ -10,18 +10,6 @@
 
 
 
-/*
-to see what we attempted 
-
-uncomment seg_width = 6;
-comment   seg_palette = 3;
-uncomment code in fill buffer
-cry when you see how bad it is. 
-
-to remove collision comment out
-check_for_wall(&heros) in scroll left function
-*/
-
 /// GLOBAL VARIABLES
 word x_scroll;		// X scroll amount in pixels
 byte seg_height;	// segment height in metatiles
@@ -30,6 +18,15 @@ byte seg_char;		// character to draw
 byte seg_palette;	// attribute table value
 byte seg_gap;		// segment gap in metatile tower
 int frm_cnt;		// frame counter
+
+//#link "famitone2.s"
+void __fastcall__ famitone_update(void);
+//#link "music_aftertherain.s"
+extern char after_the_rain_music_data[];
+//#link "music_dangerstreets.s"
+extern char danger_streets_music_data[];
+//#link "demosounds.s"
+extern char demo_sounds[];
 
 // initialize block values to check later
 char block1 = 0xf4;
@@ -90,7 +87,6 @@ void put_str(unsigned int adr, const char *str) {
   vram_write(str, strlen(str)); // write bytes to PPU
 }
 
-
 byte getchar(byte x, byte y) {
   // compute VRAM read address
   word addr = NTADR_A(x,y);
@@ -116,15 +112,14 @@ void cputsxy(byte x, byte y, const char* str) {
   vrambuf_put(NTADR_A(x,y), str, strlen(str));
 }
 
-//determine how far to move based on direction
+
 typedef enum { D_RIGHT, D_DOWN, D_LEFT, D_UP } dir_t;
 const char DIR_X[4] = { 1, 0, -1, 0 };
 const char DIR_Y[4] = { 0, 2, 0, -2 };
 
-//initalize joystick
 unsigned char pad1;
 unsigned char pad1_new;
-
+// actor x/y positions
 
 // buffers that hold vertical slices of nametable data
 char ntbuf1[PLAYROWS];	// left side
@@ -133,30 +128,29 @@ char ntbuf2[PLAYROWS];	// right side
 // a vertical slice of attribute table entries
 char attrbuf[PLAYROWS/4];
 
+/// FUNCTIONS
 
 // convert from nametable address to attribute table address
-word nt2attraddr(word a) 
-{
+word nt2attraddr(word a) {
   return (a & 0x2c00) | 0x3c0 |
     ((a >> 4) & 0x38) | ((a >> 2) & 0x07);
 }
 
 // generate new segment
-void new_segment() 
-{
+void new_segment() {
   seg_height = PLAYROWS;
   seg_width = 3;
-  //seg_width = 6;
   seg_palette = 3;
   seg_char = 0xf4;
   seg_gap = (rand8() & 3) + 2;
+  //seg_gap = 4;
+  
 }
 
 // draw metatile into nametable buffers
 // y is the metatile coordinate (row * 2)
 // ch is the starting tile index in the pattern table
-void set_metatile(byte y, byte ch) 
-{
+void set_metatile(byte y, byte ch) {
   ntbuf1[y*2] = ch;
   ntbuf1[y*2+1] = ch+1;
   ntbuf2[y*2] = ch+2;
@@ -184,19 +178,18 @@ byte i,y;
   memset(ntbuf1, 0, sizeof(ntbuf1));
   memset(ntbuf2, 0, sizeof(ntbuf2));
   // draw a random star
-  //ntbuf1[rand8() & 30] = '^';
+  ntbuf1[rand8() & 15] = '.';
   // draw segment slice to both nametable buffers
   for (i=0; i<seg_height; i++) {
     if( i == seg_gap +1 ){
 
     }
-    else if(i == seg_gap  || i == seg_gap + 2 || i == seg_gap + 3)
-    {
-   // }else if
-  //      (seg_width == 3 || seg_width == 2 || seg_width == 1)
+    else if(i == seg_gap  || i == seg_gap + 2 || i == seg_gap + 3){
+    	
+    //}else if
+        //(seg_width == 3 || seg_width == 2 || seg_width == 1)
   //{
-    }else
-    {
+    }else{
     y = PLAYROWS/2-1-i;
     set_metatile(y, seg_char);
     set_attr_entry(x, y, seg_palette);
@@ -205,8 +198,7 @@ byte i,y;
 }
 
 // write attribute table buffer to vram buffer
-void put_attr_entries(word addr) 
-{
+void put_attr_entries(word addr) {
   byte i;
   for (i=0; i<PLAYROWS/4; i++) {
     VRAMBUF_PUT(addr, attrbuf[i], 0);
@@ -217,8 +209,7 @@ void put_attr_entries(word addr)
 
 // update the nametable offscreen
 // called every 8 horizontal pixels
-void update_offscreen() 
-{
+void update_offscreen() {
   register word addr;
   byte x;
 
@@ -254,60 +245,47 @@ void update_offscreen()
   
 }
 
-// checks if hero y is out of bounds
-// if true set collision to 1
-void check_for_collision(Hero* h)
-{
+void check_for_collision(Hero* h){
   if (h->y == 238 || h->y == 26)
     h->collided = 1 ;
+
+
 }
 
-// get char of tile hero is on. 
-// if tile matches char value of block1 - block4 
-// set collision to 1
-void check_for_wall(Hero* h)
-{
+void check_for_wall(Hero* h){
   char i;
-  i = getchar(h->x, h->y);
-  if( i == block1 || i == block2 || i == block3 || i == block4){
-    h->collided = 1 ;
-  }
+  
+      i = getchar(h->x, h->y);
+   
+	if( i == block1 || i == block2 || i == block3 || i == block4){
+           h->collided = 1 ;
+        }
 }
 
-// take direction of movement and move player x and y by that direction value
-void move_player(Hero* h)
-{
+void move_player(Hero* h){
   h->x += DIR_X[h->dir];
   h->y += DIR_Y[h->dir];
+
 }
 
-// read user input and set hero direction to that value
-void movement(Hero* h)
-{
-  byte dir;
-  pad1_new = pad_trigger(0); // read the first controller
-  pad1 = pad_state(0);
+void movement(Hero* h){
    
-  if (pad1 & JOY_BTN_A_MASK) 
-    dir = D_UP;
-  else 
-    dir = D_DOWN;
-  
+   byte dir;
+   pad1_new = pad_trigger(0); // read the first controller
+   pad1 = pad_state(0);
+   
+
+  if (pad1 & JOY_BTN_A_MASK) dir = D_UP;
+	else dir = D_DOWN;
   h->dir = dir;
   
 }
 
-//bit1 every 10 increments set bit1 to zero increment bit2
-//bit2 every 10 increments set bit1 and bit2 to zero increment bit3
-//bit3 every 10 increments set bit1 bit2 and bit3 to zero increment bit4
-
-void add_point(Hero* h)
-{
+void add_point(Hero* h){
+  
   
   h->bit1++;
-  
-  if(h->bit3 == 10)
-  {
+  if(h->bit3 == 10){
   h-> bit1 = 0;
   h-> bit2 = 0;
   h-> bit3 = 0;
@@ -317,8 +295,7 @@ void add_point(Hero* h)
   cputcxy(16,1,h-> bit2+'0');
   cputcxy(17,1,h-> bit1+'0');
     
-  }else if(h->bit2 ==  10)
-  {
+  }else if(h->bit2 ==  10){
     
   h-> bit1 = 0; 
   h-> bit2 = 0;
@@ -327,23 +304,19 @@ void add_point(Hero* h)
   cputcxy(16,1,h->bit2+'0');
   cputcxy(17,1,h-> bit1+'0');
     
-  }else if(h->bit1 == 10)
-  {
+  }else if(h->bit1 == 10){
   h-> bit1 = 0;
   h-> bit2++;
   cputcxy(16,1,h->bit2+'0');
   cputcxy(17,1,h-> bit1+'0');
     
-  }else
-  {
+  }else{
+  
   cputcxy(17,1,h-> bit1+'0');
-  }
+}
 }
 
-//spawn a new heart at 240 x and y is set to the segment gap +1
-
-void spawn_item(Heart* h)
-{
+void spawn_item(Heart* h){
   h->x = 240;
   h->y = (8 * seg_height) - (seg_gap * 16);
   oam_meta_spr( h->x , h->y, 24, metasprite1);
@@ -359,8 +332,7 @@ void spawn_item(Heart* h)
 // checks for hero and heart coordinates. if coordinates match +1 spawn new item
 // if false move heart and player
 // increment frm count and scroll count both similar but different functionality throughout code base
-void scroll_left() 
-{
+void scroll_left() {
 
   if ((x_scroll & 15) == 0) 
   {
@@ -413,14 +385,7 @@ void title_screen_scroll() {
   oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
   ++x_scroll;
 }
-
-
-// start new segment of tiles
-// set x_scroll to 0
-// spawn heart
-// call scroll left 
-// loop runs until collision is detected
-// break and call initialize game
+// main loop, scrolls left continuously
 void main_scroll() 
 {
 
@@ -448,9 +413,8 @@ void main_scroll()
   init_game();
 }
 
-// scopy of main_scroll for title screen
-void scroll_title_screen()
-{
+
+void scroll_title_screen(){
   byte joy;
   new_segment();
   
@@ -469,8 +433,10 @@ void scroll_title_screen()
     heros.x = NULL;
     heros.y = 230;
 
-    if(frm_cnt == 45)
-    {
+    
+
+    
+    if(frm_cnt == 45){
       cputsxy(5,10,"Press Enter to Start");
       cputsxy(5,15,"Press Enter to Start");
       cputsxy(5,20,"Press Enter to Start");
@@ -478,26 +444,25 @@ void scroll_title_screen()
       frm_cnt= 0;
     }
     joy = joy_read (JOY_1);
-    if(joy)
-    {
-      clrscrn();
-      break;
-    }
+      
+      if(joy){
+        clrscrn();
+        break;
+      }
+    
   frm_cnt++;
   }
 }
 
-//game over screen
-void game_over()
-{
+
+void game_over(){
   clrscrn();
   frm_cnt = 0;
 }
 
 
-//reset game
-void clrscrn()
-{
+
+void clrscrn(){
   vrambuf_clear();
   ppu_off();
   vram_adr(0x2000);
@@ -505,10 +470,7 @@ void clrscrn()
   vram_adr(0x0);
 }
 
-//sets values at top of screen 
-// call scroll title screen
-void title_screen()
-{
+void title_screen(){
   vram_adr(0x23c0);
   vram_fill(0x55, 8);
   
@@ -524,13 +486,14 @@ void title_screen()
   scroll_title_screen();
 }
 
-//sets score to 0
-// set vram address and fill with data
-// set hero x and y coordinates
-// display score
-// call main scroll
-void init_game()
-{
+
+void init_game(){
+  
+  famitone_init(danger_streets_music_data);
+  //sfx_init(demo_sounds);
+  music_play(0);
+  // set music callback function for NMI
+  nmi_set_callback(famitone_update);
   
   vrambuf_clear();
   heros.bit1 = 0;
@@ -564,14 +527,25 @@ void init_game()
   cputcxy(16,1,'0');
   cputcxy(17,1,'0');
   main_scroll();
+
 }
 
-//
-void main(void) 
-{
-  pal_all(PALETTE);
+void main(void) {
+  
+  
+pal_all(PALETTE);
+  heros.asset1 = 0xf4;
+  heros.asset2 = 0xf4+1;
+  heros.asset3 = 0xf4+2;
+  heros.asset4 = 0xf4+3;
+  
   joy_install (joy_static_stddrv);
-  oam_clear();
+  
+oam_clear();
+  
   title_screen();
-  init_game(); 
+
+  init_game();
+
+    
 }
