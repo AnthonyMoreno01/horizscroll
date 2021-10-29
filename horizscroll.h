@@ -25,3 +25,4 @@ void start_game(void);
 void main_scroll(void);
 void clrscrn(void);
 void add_point(Hero*);
+void title_screen(void);

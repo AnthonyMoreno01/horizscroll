@@ -1,11 +1,11 @@
 /*
 to see what we attempted 
   make changes in new_segment()
-  uncomment seg_width=6;
-  comment seg_width=3;
+  comment seg_width=6;
+  uncomment seg_width=3;
   make changes in set_attr_entry(byte x, byte y, byte pal)
   uncomment code with label
-  " Uncomment the below code to test "
+  " comment the below code to test "
 
 to add collision
   make changes in scroll_left()
@@ -43,7 +43,7 @@ byte seg_gap;		// segment gap in metatile tower
 int frm_cnt;		// frame counter
 unsigned char pad1;	// joystick
 unsigned char pad1_new; // joystick
-
+byte death_count;
 // buffers that hold vertical slices of nametable data
 char ntbuf1[PLAYROWS];	// left side
 char ntbuf2[PLAYROWS];	// right side
@@ -55,7 +55,7 @@ char block2 = 0xf5;
 char block3 = 0xf6;
 char block4 = 0xf7;
 
-//Direction array
+//Direction array affects movement and gravity
 typedef enum { D_RIGHT, D_DOWN, D_LEFT, D_UP } dir_t;
 const char DIR_X[4] = { 1, 0, -1, 0 };
 const char DIR_Y[4] = { 0, 2, 0, -2 };
@@ -156,8 +156,8 @@ word nt2attraddr(word a) {
 void new_segment() 
 {
   seg_height = PLAYROWS;
-  //seg_width = 6;
-  seg_width = 3;
+  seg_width = 6;
+  //seg_width = 3;
   seg_palette = 3;
   seg_char = 0xf4;
   seg_gap = (rand8() & 3) + 2;
@@ -193,7 +193,7 @@ byte i,y;
   memset(ntbuf1, 0, sizeof(ntbuf1));
   memset(ntbuf2, 0, sizeof(ntbuf2));
   // draw a random star
-  ntbuf1[rand8() & 15] = '.';
+  ntbuf1[rand8() & 15] = '^';
   // draw segment slice to both nametable buffers
   for (i=0; i<seg_height; i++) 
   {
@@ -203,10 +203,10 @@ byte i,y;
     }
     else if(i == seg_gap  || i == seg_gap + 2 || i == seg_gap + 3)
     {
-    	/* Uncomment the below code to test */
-//    }else if
-//    (seg_width == 3 || seg_width == 2 || seg_width == 1)
-//  {
+    	/* Comment the below code to test */
+    }else if
+    (seg_width == 3 || seg_width == 2 || seg_width == 1)
+    {
     }
     else
     {
@@ -308,7 +308,6 @@ void movement(Hero* h)
 //bit3 every 10 increments set bit1 bit2 and bit3 to zero increment bit4
 void add_point(Hero* h)
 {
-  
   h->bit1++;
   
   if(h->bit3 == 10)
@@ -322,27 +321,25 @@ void add_point(Hero* h)
     cputcxy(16,1,h-> bit2+'0');
     cputcxy(17,1,h-> bit1+'0');
   }
-  else if(h->bit2 ==  10)
+  else if(h->bit2 == 10)
   {
-    
     h-> bit1 = 0; 
     h-> bit2 = 0;
     h-> bit3++;
     cputcxy(15,1,h-> bit3+'0');
-    cputcxy(16,1,h->bit2+'0');
+    cputcxy(16,1,h-> bit2+'0');
     cputcxy(17,1,h-> bit1+'0'); 
   }
   else if(h->bit1 == 10)
   {
     h-> bit1 = 0;
     h-> bit2++;
-    cputcxy(16,1,h->bit2+'0');
+    cputcxy(16,1,h-> bit2+'0');
     cputcxy(17,1,h-> bit1+'0'); 
   }
   else
   {
-  
-  cputcxy(17,1,h-> bit1+'0');
+    cputcxy(17,1,h-> bit1+'0');
   }
 }
 
@@ -382,13 +379,13 @@ void scroll_left()
     //check_for_wall(&heros);
     frm_cnt=0;
   }
-    if(heros.x == hearts.x )
+    if(heros.x == hearts.x)
     {
       if(heros.y == hearts.y)
       {
       	hearts.x = NULL;
         hearts.y = NULL;
-        oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
+        oam_meta_spr(hearts.x, hearts.y, 24, metasprite1);
         add_point(&heros);
       	spawn_item(&hearts);
       }
@@ -397,6 +394,7 @@ void scroll_left()
     hearts.x = hearts.x -1;
     oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
     }
+
   oam_meta_spr(heros.x, heros.y, 4, metasprite);  
   ++x_scroll;
   frm_cnt++;
@@ -410,6 +408,10 @@ void title_screen_scroll()
   if((x_scroll & 15) == 0) 
   {
     update_offscreen();
+  }
+  if(hearts.x == NULL)
+  {
+   spawn_item(&hearts); 
   }
   hearts.x = hearts.x -1;
   oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
@@ -437,7 +439,6 @@ void main_scroll()
     split(x_scroll, 0); 
     // scroll to the left
     scroll_left();
-
     if(heros.collided == 1)
     {
     game_over();
@@ -452,7 +453,6 @@ void scroll_title_screen()
 {
   byte joy;
   new_segment();
-  
   x_scroll = 0;
   spawn_item(&hearts);
   // infinite loop
@@ -479,7 +479,6 @@ void scroll_title_screen()
         clrscrn();
         break;
       }
-    
   frm_cnt++;
   }
 }
@@ -487,8 +486,15 @@ void scroll_title_screen()
 //game over screen
 void game_over()
 {
+  death_count++;
   clrscrn();
-  frm_cnt = 0;
+  if(death_count == 5)
+  {
+    death_count = 0;
+    title_screen();
+    
+  }
+    frm_cnt = 0;
 }
 
 
