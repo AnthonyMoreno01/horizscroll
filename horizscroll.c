@@ -10,6 +10,17 @@
 
 
 
+/*
+to see what we attempted 
+
+ucomment  seg width to 6
+uncomment code in fill buffer
+cry when you see how bad it is. 
+
+to remove collision comment out
+check_for_wall(&heros) in scroll left function
+*/
+
 /// GLOBAL VARIABLES
 word x_scroll;		// X scroll amount in pixels
 byte seg_height;	// segment height in metatiles
@@ -134,6 +145,7 @@ void new_segment()
 {
   seg_height = PLAYROWS;
   seg_width = 3;
+  //seg_width = 6;
   seg_palette = 3;
   seg_char = 0xf4;
   seg_gap = (rand8() & 3) + 2;
@@ -171,7 +183,7 @@ byte i,y;
   memset(ntbuf1, 0, sizeof(ntbuf1));
   memset(ntbuf2, 0, sizeof(ntbuf2));
   // draw a random star
-  ntbuf1[rand8() & 30] = '^';
+  //ntbuf1[rand8() & 30] = '^';
   // draw segment slice to both nametable buffers
   for (i=0; i<seg_height; i++) {
     if( i == seg_gap +1 ){
@@ -179,9 +191,9 @@ byte i,y;
     }
     else if(i == seg_gap  || i == seg_gap + 2 || i == seg_gap + 3)
     {
-//    }else if
-//        (seg_width == 3 || seg_width == 2 || seg_width == 1)
-//  {
+   // }else if
+  //      (seg_width == 3 || seg_width == 2 || seg_width == 1)
+  //{
     }else
     {
     y = PLAYROWS/2-1-i;
