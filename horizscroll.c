@@ -1,38 +1,16 @@
-
-/*
-We demonstrate horizontal scrolling of two nametables.
-Vertical mirroring is set, so nametables A and B are
-to the left and right of each other.
-
-New playfield data is randomly generated and updated
-offscreen using the vrambuf module.
-We update the nametable in 16-pixel-wide vertical strips,
-using 2x2 blocks of tiles ("metatiles").
-
-We also use the split() function to create a status bar.
-*/
-
 #include "neslib.h"
 #include <string.h>
 #include <joystick.h>
 #include <nes.h>
-
-// 0 = horizontal mirroring
-// 1 = vertical mirroring
-#define NES_MIRRORING 1
-
-
 #include "horizscroll.h"
-
-// VRAM update buffer
 #include "vrambuf.h"
 //#link "vrambuf.c"
-
 // link the pattern table into CHR ROM
 //#link "chr_generic.s"
 
-/// GLOBAL VARIABLES
 
+
+/// GLOBAL VARIABLES
 word x_scroll;		// X scroll amount in pixels
 byte seg_height;	// segment height in metatiles
 byte seg_width;		// segment width in metatiles
@@ -40,9 +18,12 @@ byte seg_char;		// character to draw
 byte seg_palette;	// attribute table value
 byte seg_gap;
 int t;
-// number of rows in scrolling playfield (without status bar)
-#define PLAYROWS 24
 
+
+// 0 = horizontal mirroring
+// 1 = vertical mirroring
+#define NES_MIRRORING 1
+#define PLAYROWS 24
 #define TILE 0xd8
 #define TILE1 0xCC
 #define ATTR 02
@@ -64,6 +45,7 @@ const unsigned char metasprite1[]={
 
 Hero heros;
 Heart hearts;
+
  char block1 = 0xf4;
  char block2 = 0xf5;
  char block3 = 0xf6;
@@ -372,12 +354,19 @@ void scroll_left() {
 }
   
 
-// main loop, scrolls left continuously
-void scroll_demo() 
-{
+void title_screen_scroll() {
 
-  
-  
+  if ((x_scroll & 15) == 0) 
+  {
+    update_offscreen();
+  }
+  hearts.x = hearts.x -1;
+  oam_meta_spr(hearts.x , hearts.y, 24, metasprite1);
+  ++x_scroll;
+}
+// main loop, scrolls left continuously
+void main_scroll() 
+{
 
   new_segment();
   x_scroll = 0;
@@ -400,15 +389,57 @@ void scroll_demo()
   	}
   }
    
-  test_function();
+  init_game();
 }
 
+
+void scroll_title_screen(){
+  byte joy;
+  new_segment();
+  
+  x_scroll = 0;
+  spawn_item(&hearts);
+  // infinite loop
+  while (1) 
+  {
+    // ensure VRAM buffer is cleared
+    ppu_wait_nmi();
+    vrambuf_clear();
+    // split at sprite zero and set X scroll
+    split(x_scroll, 0); 
+    // scroll to the left
+    title_screen_scroll();
+    heros.x = NULL;
+    heros.y = 230;
+
+    
+
+    
+    if(t == 45){
+      cputsxy(5,10,"Press Enter to Start");
+      cputsxy(5,15,"Press Enter to Start");
+      cputsxy(5,20,"Press Enter to Start");
+
+      t= 0;
+    }
+    joy = joy_read (JOY_1);
+      
+      if(joy){
+        clrscrn();
+        break;
+      }
+    
+  t++;
+  }
+}
 
 
 void game_over(){
   clrscrn();
   t = 0;
 }
+
+
 
 void clrscrn(){
   vrambuf_clear();
@@ -418,7 +449,24 @@ void clrscrn(){
   vram_adr(0x0);
 }
 
-void test_function(){
+void title_screen(){
+  vram_adr(0x23c0);
+  vram_fill(0x55, 8);
+  
+  vrambuf_clear();
+  oam_spr(0, 30, 0xa5, 0, 0);
+  set_vram_update(updbuf);
+  
+  ppu_on_all();
+  
+  cputsxy(10,1,"Infiniscroll");
+  cputsxy(9,2,"Anthony Moreno ");
+  cputsxy(7,3,"Alessandro Abarca");
+  scroll_title_screen();
+}
+
+
+void init_game(){
   
   vrambuf_clear();
   heros.bit1 = 0;
@@ -451,18 +499,25 @@ void test_function(){
   cputcxy(15,1,'0');
   cputcxy(16,1,'0');
   cputcxy(17,1,'0');
-  scroll_demo();
+  main_scroll();
 
 }
 
 void main(void) {
+  
 pal_all(PALETTE);
   heros.asset1 = 0xf4;
   heros.asset2 = 0xf4+1;
   heros.asset3 = 0xf4+2;
   heros.asset4 = 0xf4+3;
+  
+  joy_install (joy_static_stddrv);
+  
+oam_clear();
+  
+  title_screen();
 
-  test_function();
+  init_game();
 
     
 }

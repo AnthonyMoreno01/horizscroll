@@ -23,9 +23,9 @@ typedef struct {
 
 
 void play(void);
-void test_function(void);
+void init_game(void);
 void game_over(void);
 void start_game(void);
-void scroll_demo(void);
+void main_scroll(void);
 void clrscrn(void);
 void add_point(Hero*);
