@@ -32,12 +32,11 @@ to add collision
 #define TILE1 0xCC	// heart attributes
 #define ATTR1 01	// heart attributes
 #define ATTR 02		// character attributes
-
+#define seg_char 0xf4
 /// GLOBAL VARIABLES
 word x_scroll;		// X scroll amount in pixels
 byte seg_height;	// segment height in metatiles
 byte seg_width;		// segment width in metatiles
-byte seg_char;		// character to draw
 byte seg_palette;	// attribute table value
 byte seg_gap;		// segment gap in metatile tower
 int frm_cnt;		// frame counter
@@ -65,6 +64,7 @@ char attrbuf[PLAYROWS/4];
 
 //#link "famitone2.s"
 void __fastcall__ famitone_update(void);
+
 //#link "music_aftertherain.s"
 extern char after_the_rain_music_data[];
 //#link "demosounds.s"
@@ -157,7 +157,6 @@ void new_segment()
   seg_width = 6;
   //seg_width = 3;
   seg_palette = 3;
-  seg_char = 0xf4;
   seg_gap = (rand8() & 3) + 2;
 }
 
@@ -190,6 +189,7 @@ byte i,y;
   // clear nametable buffers
   memset(ntbuf1, 0, sizeof(ntbuf1));
   memset(ntbuf2, 0, sizeof(ntbuf2));
+  
   // draw a random star
   ntbuf1[rand8() & 15] = '^';
   // draw segment slice to both nametable buffers
@@ -209,6 +209,7 @@ byte i,y;
     else
     {
     y = PLAYROWS/2-1-i;
+     
     set_metatile(y, seg_char);
     set_attr_entry(x, y, seg_palette);
     }
@@ -344,7 +345,7 @@ void add_point(Hero* h)
 //spawn a new heart at 240 x and y is set to the segment gap +1
 void spawn_item(Heart* h)
 {
-    sfx_play(1,0);
+  sfx_play(1,0);
   h->x = 240;
   h->y = (8 * seg_height) - (seg_gap * 16);
   oam_meta_spr( h->x , h->y, 24, metasprite1);
@@ -427,12 +428,14 @@ void title_screen_scroll()
 void main_scroll() 
 {
 
+    
   new_segment();
   x_scroll = 0;
   spawn_item(&hearts);
   // infinite loop
   while (1) 
   {
+    
     // ensure VRAM buffer is cleared
     ppu_wait_nmi();
     vrambuf_clear();
@@ -461,6 +464,7 @@ void scroll_title_screen()
   // infinite loop
   while (1) 
   {
+    
     // ensure VRAM buffer is cleared
     ppu_wait_nmi();
     vrambuf_clear();
@@ -566,13 +570,14 @@ void main(void)
 {
   
   /* Uncomment below code to hear sound. Headphone warning*/ 
+  
   //famitone_init(after_the_rain_music_data);
   //sfx_init(demo_sounds);
   // set music callback function for NMI
   //nmi_set_callback(famitone_update);
   // play music
-  
-  //music_play(5);
+  //music_play(4);
+  //while(1){}
   //music_stop();
   
   pal_all(PALETTE);
@@ -580,5 +585,5 @@ void main(void)
   oam_clear();
   title_screen();
   
-  init_game();    
+    init_game();    
 }
